@@ -1,0 +1,1497 @@
+#LyX 2.0 created this file. For more info see http://www.lyx.org/
+\lyxformat 413
+\begin_document
+\begin_header
+\textclass article
+\begin_preamble
+\usepackage{jurabib}
+\jurabibsetup{%
+titleformat=italic,%
+titleformat=commasep,%
+commabeforerest,%
+citefull=first,%
+lookat,%
+oxford,%
+pages=format,%
+idem%
+}
+\end_preamble
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman lmodern
+\font_sans default
+\font_typewriter default
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize 12
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry true
+\use_amsmath 1
+\use_esint 1
+\use_mhchem 1
+\use_mathdots 1
+\cite_engine jurabib
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\leftmargin 1in
+\topmargin 1in
+\rightmargin 1in
+\bottommargin 1in
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Standard
+\align right
+Dave Heath, USC Marshall School of Business
+\end_layout
+
+\begin_layout Standard
+\align right
+March 2013
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This note and the accompanying files illustrate one way to do GMM estimation
+ in Matlab.
+ I certainly don't claim that it will always work or that it's anywhere
+ close to optimal.
+\end_layout
+
+\begin_layout Standard
+We will do the simplest model there is -- OLS -- but it's a template that
+ should work with most problems and introduces a few useful commands in
+ Matlab.
+ We want to estimate 
+\begin_inset Formula 
+\[
+y_{t}=\alpha+\beta x_{t}+\epsilon_{t}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Make sure your working directory is in the Matlab path.
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Make a blank m-file and save it as work_file.m .
+ I usually keep it open and then you can run the whole file by typing 
+\begin_inset Quotes eld
+\end_inset
+
+work_file
+\begin_inset Quotes erd
+\end_inset
+
+ in the command window, or else run individual commands and pieces of the
+ file by highlighting in the editor and hitting F9.
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Initializing, 
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+clear all; close all; clc;
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Import your data.
+ In this case we'll just simulate some.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+T = 100; 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+x = randn(T,1); 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+eps_raw = trnd(10,T-1,1); 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+y = 2*x + [eps_raw;0] + exp(x).*[0;eps_raw]; 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+figure; plot(x,y, '.'); title('scatterplot Y vs X') 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+OLS_results = regstats(y,x); 
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $\alpha=0,\,\beta=2$
+\end_inset
+
+, and our errors are fat tailed, heteroskedastic and autocorrelated.
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Now we need to do the estimate.
+ We will need another m-file, a function that takes in 1) parameters 2)
+ data and 3) a weighting matrix and gives us a J-stat.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Open another blank m-file and save it as OLS_J.m .
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+function [Jstat, g_t, g_T] = OLS_J(param_vec, data, W)
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+OLS_J takes in the three arguments and gives us the J-stat, and 
+\begin_inset Formula $g_{t}$
+\end_inset
+
+ and 
+\begin_inset Formula $g_{T}$
+\end_inset
+
+ optionally.
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+param_vec is the vectorized parameters 
+\begin_inset Formula $\theta=[\alpha\,\beta]'$
+\end_inset
+
+.
+ Data is 
+\begin_inset Formula $[y\, x]$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+alpha = param_vec(1); beta = param_vec(2);
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+y = data(:,1); x = data(:,2);
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+T = size(y,1);
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Given those, we want to compute the moments
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+u_{t}=y_{t}-\alpha-\beta x_{t}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+g_{t}=u_{t}\otimes[1\, x_{t}]
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+u_t = nan(T,1);
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+g_t = nan(T,2);
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+for t = 1:T 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+u_t(t) = y(t) - alpha - beta*x(t);
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+g_t(t,:) = kron(u_t(t),[1 x(t)]);
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+end
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+g_T = mean(g_t);
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+Jstat = g_T*W*g_T';
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+That's a bit clunky but just to illustrate the general way with the kron()
+ function.
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Save OLS_J.m and let's make sure it works.
+ Go back to work_file.m :
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+testparams = [0;1]; 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+Jstat_test = OLS_J(testparams, [y,x], eye(2)); 
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Eye(2) is the 2x2 identity matrix.
+ Evaluating gives us a Jstat for 
+\begin_inset Formula $\theta=[0\,1]'$
+\end_inset
+
+.
+ Okay, now we need to search for the best fit.
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+To do this we need to specify a function call that takes 
+\emph on
+only
+\emph default
+ a parameter vector, and gives the J stat, for the specified data and weighting
+ matrix:
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+OLS_J1 = @(param_vec) OLS_J(param_vec, [y,x], eye(2)); 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+Jstat_test2 = OLS_J1([0;1]); 
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Okay, now to search.
+  I like to do a grid search or shotgun search to find a good starting point.
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+bestgridJ = 1e10; bestgridtheta = [NaN; NaN]; 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+for gridalpha = -10:1:10 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+for gridbeta = -10:1:10 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+Jstat = OLS_J1([gridalpha;gridbeta]); 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+if Jstat < bestgridJ 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+bestgridJ = Jstat; 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+bestgridtheta = [gridalpha;gridbeta]; 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+end 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+end %i 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+end %j 
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+That steps over the parameter space from [-10,-10] to [+10,+10] in increments
+ of one and picks the best point.
+ We use that as our starting point for the real search.
+ We will not use the built in fmin functions but rather a user-defined minimizer.
+ Do NOT use the custom minimizer for any other estimation, it is here only
+ as an illustration.
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+theta_hat = fmin_custom(OLS_J1, bestgridtheta); 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+disp('OLS coeffs 1st stage coeffs') 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+disp([OLS_results.beta, theta_hat]); 
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We get exactly the same estimate as OLS.
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Okay, now on to the second stage.
+ First we have to evaluate the model at the first stage to get the 
+\begin_inset Formula $g_{t}(\theta)$
+\end_inset
+
+ for our optimal weighting matrix.
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+[Jstat, g_t, g_T] = OLS_J1(theta_hat); 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+figure; plot(g_t); title('Time series of the moments') 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+figure; plot(g_t(1:end-1,1),g_t(2:end,1),'+'); title('g1_t vs g1_{t-1}')
+ 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+figure; plot(g_t(1:end-1,2),g_t(2:end,2),'o'); title('g2_t vs g2_{t-1}')
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Always a good idea to look at the pricing errors / moments.
+ They potentially look autocorrelated from the last two plots (plus we set
+ it up that way), so let's do Newey West:
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+Acovg = zeros(2,2); 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+num_lags = 1;
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+for n = 0:num_lags 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+NWweight = 1 - n/(num_lags+1); 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+Acovg = Acovg + ...
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+(1+(n>0))*NWweight*g_t(1+n:end,:).'*g_t(1:end-n,:)/T; 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+end 
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+W2 = inv(Acovg); 
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Now let's define our function call that evaluates the J stat using the optimal
+ weighting matrix:
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+OLS_J2 = @(param_vec) OLS_J(param_vec, [y,x], W2); 
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The first stage 
+\begin_inset Formula $\hat{\theta}$
+\end_inset
+
+ should be a good guess for a starting point.
+ (Of course since we're exactly identified, it's a perfect guess.)
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+theta_hat2 = fmin_custom(OLS_J2, theta_hat); 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+disp('OLS coeffs 2nd stage coeffs') 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+disp([OLS_results.beta, theta_hat2]); 
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+And finally, standard errors.
+ With the optimal weighting matrix the formula is simple.
+ We just need 
+\begin_inset Formula $\frac{\partial g_{T}}{\partial\theta}$
+\end_inset
+
+, the gradient of the moment estimates.
+ Again, we could easily get them analytically but as an illustration of
+ the more general approach, let's do finite difference:
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+stepsize = 1e-10; 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+[ans, ans, g_T] = OLS_J2(theta_hat2); 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+for i = 1:2 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+theta_hat2_fd = theta_hat2; 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+theta_hat2_fd(i) = theta_hat2(i)+stepsize; 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+[ans, ans, g_T_fd] = OLS_J2(theta_hat2_fd); 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+dgT(:,i) = (g_T_fd - g_T)'/stepsize; 
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+end
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+gives the gradient matrix via finite difference, and
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+thetahat2_SE = sqrt(diag(inv(dgT'*W2*dgT))/T);
+\end_layout
+
+\begin_layout Standard
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+gives the standard errors.
+ In the end, 
+\end_layout
+
+\begin_layout Itemize
+We exactly recapitulate the OLS estimate (because we are exactly identified
+ and can always set the Jstat to zero)
+\end_layout
+
+\begin_layout Itemize
+The standard error for 
+\begin_inset Formula $\alpha$
+\end_inset
+
+ is about the same size in OLS vs GMM 
+\end_layout
+
+\begin_layout Itemize
+The standard error for 
+\begin_inset Formula $\beta$
+\end_inset
+
+ is larger in GMM reflecting the autocorrelation in the errors
+\end_layout
+
+\end_body
+\end_document
