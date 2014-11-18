@@ -103,8 +103,7 @@ This note and the accompanying files illustrate one way to do GMM estimation
 
 \begin_layout Standard
 We will do the simplest model there is -- OLS -- but it's a template that
- should work with most problems and introduces a few useful commands in
- Matlab.
+ works with most problems and introduces a few useful commands in Matlab.
  We want to estimate 
 \begin_inset Formula 
 \[
@@ -933,9 +932,6 @@ end %j
 That steps over the parameter space from [-10,-10] to [+10,+10] in increments
  of one and picks the best point.
  We use that as our starting point for the real search.
- We will not use the built in fmin functions but rather a user-defined minimizer.
- Do NOT use the custom minimizer for any other estimation, it is here only
- as an illustration.
 \end_layout
 
 \begin_layout Standard
@@ -948,7 +944,7 @@ That steps over the parameter space from [-10,-10] to [+10,+10] in increments
 \begin_layout Standard
 
 \series bold
-theta_hat = fmin_custom(OLS_J1, bestgridtheta); 
+theta_hat = fminunc(OLS_J1, bestgridtheta); 
 \end_layout
 
 \begin_layout Standard
@@ -1213,8 +1209,8 @@ The first stage
 \begin_inset Formula $\hat{\theta}$
 \end_inset
 
- should be a good guess for a starting point.
- (Of course since we're exactly identified, it's a perfect guess.)
+ is a good guess for a starting point.
+ (Of course since this system is exactly identified, it's a perfect guess.)
 \end_layout
 
 \begin_layout Standard
@@ -1227,7 +1223,7 @@ The first stage
 \begin_layout Standard
 
 \series bold
-theta_hat2 = fmin_custom(OLS_J2, theta_hat); 
+theta_hat2 = fminunc(OLS_J2, theta_hat); 
 \end_layout
 
 \begin_layout Standard

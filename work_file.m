@@ -34,7 +34,7 @@ for gridalpha = -10:1:10
 end %j
 
 %do a proper search starting from best grid point
-theta_hat = fmin_custom(OLS_J1, bestgridtheta);
+theta_hat = fminunc(OLS_J1, bestgridtheta);
 disp('OLS coeffs   1st stage coeffs')
 disp([OLS_results.beta, theta_hat]);
 
@@ -64,7 +64,7 @@ W2 = inv(Acovg);
 OLS_J2 = @(param_vec) OLS_J(param_vec, [y,x], W2);
 
 %2nd stage estimate, efficient under heteroskedasticity and autocorrelation
-theta_hat2 = fmin_custom(OLS_J2, theta_hat);
+theta_hat2 = fminunc(OLS_J2, theta_hat);
 
 disp('OLS coeffs   2nd stage coeffs')
 disp([OLS_results.beta, theta_hat2]);
